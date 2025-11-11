@@ -12,7 +12,7 @@ logger = logging.getLogger(__file__)
 
 
 def get_product_list(last_id, client_id, seller_token):
-    """Получить список товаров магазина озон. 
+    """Получить список товаров магазина озон.
 
     Функция делает запрос к листу продуктов, с
     определенными параметрами, затем возвращет итоговый
@@ -51,7 +51,7 @@ def get_product_list(last_id, client_id, seller_token):
 
 
 def get_offer_ids(client_id, seller_token):
-    """Получить артикулы товаров
+    """Получить артикулы товаров.
 
     Получает список продуктов(по id клиента) и по нему
     возвращает артикулы этих товаров
@@ -61,7 +61,7 @@ def get_offer_ids(client_id, seller_token):
         seller_token (str): токен продавца
     Returns:
         list: список артикулов товаров
-    """   
+    """
     last_id = ""
     product_list = []
     while True:
@@ -78,7 +78,7 @@ def get_offer_ids(client_id, seller_token):
 
 
 def update_price(prices: list, client_id, seller_token):
-    """Обновить цены товаров (До 100)
+    """Обновить цены товаров (До 100).
 
     Отправляет запрос в ozon на изменение цены
     в базе данных.
@@ -135,7 +135,7 @@ def update_price(prices: list, client_id, seller_token):
 
 
 def update_stocks(stocks: list, client_id, seller_token):
-    """Обновить остатки товара
+    """Обновить остатки товара.
 
     Позволяет изменить информацию о количестве товара в наличии
 
@@ -176,8 +176,8 @@ def update_stocks(stocks: list, client_id, seller_token):
 
 
 def download_stock():
-    """Скачать файл ostatki с сайта casio
-    
+    """Скачать файл ostatki с сайта casio.
+
     Делает запрос на timeworld.ru, скачивает зип архип, разархивирует
     в текущую папку, переносит данные из таблицы(.xls) в словарь, с разбиением
     на столюбы и строки.
@@ -185,7 +185,6 @@ def download_stock():
         dict: Список данные таблицы с товарами.
     Example:
     >>>download_stock()
-    
     """
     casio_url = "https://timeworld.ru/upload/files/ostatki.zip"
     session = requests.Session()
@@ -284,7 +283,7 @@ def price_conversion(price: str) -> str:
 
 
 def divide(lst: list, n: int):
-    """Разделить список на части
+    """Разделить список на части.
 
     Делит список на части, в которой по n-элементов.
     Args:
@@ -297,7 +296,7 @@ def divide(lst: list, n: int):
     [[1, 2], [3, 4]]
     """
     for i in range(0, len(lst), n):
-        yield lst[i : i + n]
+        yield lst[i: i + n]
 
 
 async def upload_prices(watch_remnants, client_id, seller_token):
@@ -323,7 +322,7 @@ async def upload_prices(watch_remnants, client_id, seller_token):
 
 
 async def upload_stocks(watch_remnants, client_id, seller_token):
-    """Отправляет данные о складе в базу данных ozon
+    """Отправляет данные о складе в базу данных ozon.
 
     Создает список товаров склада, и частями отправляет в ozon обновленные
     данные товара на складе.
