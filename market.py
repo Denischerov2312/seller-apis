@@ -2,9 +2,7 @@ import datetime
 import logging.config
 from environs import Env
 from seller import download_stock
-
 import requests
-
 from seller import divide, price_conversion
 
 logger = logging.getLogger(__file__)
@@ -12,18 +10,19 @@ logger = logging.getLogger(__file__)
 
 def get_product_list(page, campaign_id, access_token):
     """
-    Получить список товаров в каталоге с информацией.
+    Получает список товаров из Яндекс.Маркета.
 
-    Лимит 10 000 товаров в минуту, Для каждого товара возвращается
-    Идентификатор текущей карточки(marketSku) и описание товара.
+    Запрашивает данные о товарах частями. Лимит 200 товаров за запрос.
+    Для каждого товара возвращается идентификатор offerId, Sku и другие
+    данные карточки.
 
     Args:
-        page (&): Идентификатор страницы c результатами.
-        capmaign_id (str): Идентификационный номер компании.
-        access_token (str): Уникальный токен доступа.
+        page (str): Идентификатор следующей страницы результатов (page_token).
+        campaign_id (str): Идентификационный номер кампании.
+        access_token (str): Токен доступа .
 
     Returns:
-        Dict: Информация о товарах в каталоге.
+        dict: Словарь с информацией о товарах.
     """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
@@ -45,18 +44,19 @@ def get_product_list(page, campaign_id, access_token):
 
 def update_stocks(stocks, campaign_id, access_token):
     """
-    Передает данные об остатках товаров.
+    Обновляет данные об остатках товаров на складе.
 
-    Обновляет информацию на складе о количестве товаров.
-    Для группы складов передавайте остатки только для одного любого склада.
-    Информация для остальных складов в этой группе обновится автоматически.
+    Отправляет информацию о количестве товаров на сервер Яндекс.Маркета.
+    Для группы складов достаточно передать остатки для одного склада,
+    информация для остальных обновится автоматически.
 
     Args:
-        stocks (list): Информация об остатках товара.
-        campaign_id (str): Идентификационный номер компании.
-        access_token (str): Индивидуальный токен доступа.
+        stocks (list): Список словарей с информацией об остатках (sku, warehouseId, items).
+        campaign_id (str): Идентификационный номер кампании.
+        access_token (str): Токен доступа к API.
+
     Returns:
-        dict: Ответ от сервера.
+        dict: Ответ сервера в формате JSON.
     """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
@@ -75,17 +75,17 @@ def update_stocks(stocks, campaign_id, access_token):
 
 def update_price(prices, campaign_id, access_token):
     """
-    Обновляет полученные цена на сайте.
+    Обновляет цены товаров в магазине.
 
-    Делает запрос на сайт с изменением цен, только по тем
-    ценам, которые получает.
+    Отправляет запрос на изменение цен только для переданного списка товаров.
 
     Args:
-        prices (list): Список цен на товары.
-        campaign_id (str): Идентификационный номер компании.
-        access_token (str): Уникальный токен доступа.
+        prices (list): Список словарей с новыми ценами.
+        campaign_id (str): Идентификационный номер кампании.
+        access_token (str): Токен доступа к API.
+
     Returns:
-        Json: Ответ запроса.
+        dict: Ответ сервера в формате JSON.
     """
     endpoint_url = "https://api.partner.market.yandex.ru/"
     headers = {
@@ -104,15 +104,17 @@ def update_price(prices, campaign_id, access_token):
 
 def get_offer_ids(campaign_id, market_token):
     """
-    Получить артикулы товаров Яндекс маркета.
+    Получает список артикулов товаров из Яндекс.Маркета.
 
-    Запршивает лист товаров, извлекает из него артикулы.
+    Выгружает полный список товаров через пагинацию и извлекает
+    из него артикулы.
 
     Args:
-        campaign_id(str): Идентификационный номер компании.
-        market_token(str): Уникальный токен доступа.
+        campaign_id (str): Идентификационный номер кампании.
+        market_token (str): Токен доступа к API.
+
     Returns:
-        list: Список с артикулами(Sku) товаров.
+        list: Список артикулов товаров.
     """
     page = ""
     product_list = []
@@ -130,18 +132,18 @@ def get_offer_ids(campaign_id, market_token):
 
 def create_stocks(watch_remnants, offer_ids, warehouse_id):
     """
-    Формирует список товаров по артикулам.
+    Формирует список остатков для отправки в API.
 
-    Создает список товаров, чьи id содержаться в offer_ids.
-    Товар представлен ввиде словаря с данными:
-    Количество, артикул, вид и тд.
+    Обрабатывает только те товары, чьи артикулы присутствуют в `offer_ids`. Если товара нет в файле остатков,
+    но он есть в `offer_ids`, ему присваивается нулевой остаток.
 
     Args:
-        watch_remnants (list): Полный список товаров со склада.
-        offer_ids (list): Список артикулов, от яндекс маркета.
-        warehouse_id (str): Идентификационный номер склада.
+        watch_remnants (list): Список данных об остатках из учетной системы.
+        offer_ids (list): Список артикулов, полученных из Яндекс.Маркета.
+        warehouse_id (str): Идентификатор склада.
+
     Returns:
-        list: Список товаров из offer_ids
+        list: Список словарей с данными об остатках, готовый для отправки в API.
     """
     # Уберем то, что не загружено в market
     stocks = list()
@@ -189,16 +191,17 @@ def create_stocks(watch_remnants, offer_ids, warehouse_id):
 
 def create_prices(watch_remnants, offer_ids):
     """
-    Формирует список цен товаров из предложенных артикулов
+    Формирует список цен для отправки в API.
 
-    Создает список с информацией о товаре(Цена, артикул), сохраняя
-    ввиде словаря. В списке только товары, id которых есть в offer_ids
+    Создает структуру данных с ценами. Включает только те товары,
+    чьи артикулы есть в списке `offer_ids`.
 
     Args:
-        watch_remnants(list): Полный список товаров со склада.
-        offer_ids(list): Список id,
+        watch_remnants (list): Список данных о товарах из учетной системы.
+        offer_ids (list): Список артикулов товаров.
+
     Returns:
-        list: Список актуальных цен
+        list: Список словарей с ценами, готовый для отправки в API.
     """
     prices = []
     for watch in watch_remnants:
@@ -221,17 +224,18 @@ def create_prices(watch_remnants, offer_ids):
 
 async def upload_prices(watch_remnants, campaign_id, market_token):
     """
-    Обновляет цены товаров на сайте.
+    Выполняет полный цикл обновления цен.
 
-    Создает список цен по offer_ids, и делает
-    запросы на обновление цен (по 500 штук).
+    Получает список товаров из Маркета, формирует актуальные цены на основе
+    остатков и отправляет их в API пакетами.
 
     Args:
-        watch_remnants (list): Полный список товаров со склада.
-        campaign_id (str): Идентификационный номер компании.
-        market_token (str): Уникальный токен доступа.
+        watch_remnants (list): Список товаров из учетной системы.
+        campaign_id (str): Идентификационный номер кампании.
+        market_token (str): Токен доступа к API.
+
     Returns:
-        list: Список актуальных цен
+        list: Список сформированных и отправленных цен.
     """
     offer_ids = get_offer_ids(campaign_id, market_token)
     prices = create_prices(watch_remnants, offer_ids)
@@ -242,20 +246,19 @@ async def upload_prices(watch_remnants, campaign_id, market_token):
 
 async def upload_stocks(watch_remnants, campaign_id, market_token, warehouse_id):
     """
-    Формирует данные о товарах складе и возвращает его текущее состояние.
+    Выполняет полный цикл обновления остатков.
 
-    Создает список данных про товары определенной компании(campaign_id), затем
-    частями отправляет эти данные в Яндекс. Возвращает два списка: в первом
-    хранятся только товары имеющиеся в наличии, во втором все товары.
+    Получает список товаров, формирует данные об остатках и отправляет их
+    в API.
 
     Args:
-        watch_remnants (list): Полный список товаров со склада.
-        campaign_id (str): Идентификационный номер компании.
-        market_token (str): Уникальный токен доступа.
-        warehouse_id (str): Идентификационный номер склада.
+        watch_remnants (list): Список товаров из учетной системы.
+        campaign_id (str): Идентификационный номер кампании.
+        market_token (str): Токен доступа к API.
+        warehouse_id (str): Идентификатор склада.
+
     Returns:
-        not_empty(list): Список только тех товаров,которые имеющются в наличии.
-        stocks (list): Список товаров.
+        tuple: Кортеж из двух списков, список товаров с ненулевым остатком, полный список обновленных товаров.
     """
     offer_ids = get_offer_ids(campaign_id, market_token)
     stocks = create_stocks(watch_remnants, offer_ids, warehouse_id)
